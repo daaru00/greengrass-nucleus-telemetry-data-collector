@@ -1,0 +1,43 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform:
+  - AWS::Serverless-2016-10-31
+
+Description: "Collect Nucleus telemetry data as CloudWatch metrics."
+
+Parameters:
+  MqttTopic:
+    Type: String
+    Description: "MQTT Topic name"
+  CoreDevice:
+    Type: String
+    Description: "Greengrass Core Device name"
+    Default: ""
+  MetricNamespace:
+    Type: String
+    Description: "CloudWatch metric namespace name"
+    Default: "Greengrass"
+
+Globals:
+  Function:
+    Runtime: "nodejs14.x"
+    Timeout: 6
+    CodeUri: src/
+
+Resources:
+
+  CollectFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Ref AWS::StackName
+      Handler: collect.handler
+      Environment:
+        Variables:
+          METRIC_NAMESPACE: !Ref MetricNamespace
+          CORE_DEVICE: !Ref CoreDevice
+      Policies:
+        - CloudWatchPutMetricPolicy: {}
+      Events:
+        NucleusTelemetryEvent:
+          Type: IoTRule
+          Properties:
+            Sql: !Sub "SELECT * FROM '${MqttTopic}'"
